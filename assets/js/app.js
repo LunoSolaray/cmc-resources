@@ -81,25 +81,15 @@ function getExt(path) {
 function getFileMeta(path) {
   return EXT_META[getExt(path)] || { icon: "file", cls: "" };
 }
-// 可预览类型：PDF 用浏览器原生引擎；Office 系借 Office 在线视图（要求公网 URL）
-const OFFICE_EXTS = new Set(["doc", "docx", "ppt", "pptx", "xls", "xlsx"]);
+// 可预览类型：PDF 由浏览器原生引擎渲染
 function previewable(path) {
-  const ext = getExt(path);
-  if (ext === "pdf") return true;
-  if (!OFFICE_EXTS.has(ext)) return false;
-  const h = location.hostname;
-  return h !== "localhost" && h !== "127.0.0.1";
-}
-function previewSrc(path) {
-  if (getExt(path) === "pdf") return path;
-  return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(
-    location.origin + "/" + path,
-  )}`;
+  return getExt(path) === "pdf";
 }
 function escapeHtml(text) {
+  // innerHTML 只转义 < > &，属性值里的双引号需额外处理
   const div = document.createElement("div");
   div.textContent = text;
-  return div.innerHTML;
+  return div.innerHTML.replace(/"/g, "&quot;");
 }
 
 // ============================================================
@@ -109,8 +99,10 @@ const ALL = "__all__";
 const state = {
   tree: [],
   flatIndex: [],
+  counts: new Map(),
   currentCat: ALL,
   keyword: "",
+  cursor: -1,
   loading: true,
   error: null,
 };
@@ -133,18 +125,45 @@ async function loadManifest(force = false) {
   return res.json();
 }
 
+// 搜索规范化：小写 + 去空白。加载索引时对「分类链+文件名」预计算，不占索引体积
+function normText(s) {
+  return s.toLowerCase().replace(/\s+/g, "");
+}
+
 function buildIndex(manifest) {
+  if (!manifest || !Array.isArray(manifest.categories)) {
+    throw new Error("索引格式不正确：resources.json 结构损坏，重新运行 scripts/build_manifest.py");
+  }
   const flat = [];
+  const counts = new Map();
   manifest.categories.forEach((cat) => {
-    cat.files.forEach((f) => flat.push({ f, label: cat.name, topId: cat.id, catId: cat.id }));
+    cat.files.forEach((f) =>
+      flat.push({
+        f,
+        label: cat.name,
+        topId: cat.id,
+        catId: cat.id,
+        norm: normText(cat.name + f.name),
+      }),
+    );
+    let n = cat.files.length;
     (cat.children || []).forEach((ch) => {
       ch.files.forEach((f) =>
-        flat.push({ f, label: `${cat.name} / ${ch.name}`, topId: cat.id, catId: ch.id }),
+        flat.push({
+          f,
+          label: `${cat.name} / ${ch.name}`,
+          topId: cat.id,
+          catId: ch.id,
+          norm: normText(cat.name + ch.name + f.name),
+        }),
       );
+      n += ch.files.length;
     });
+    counts.set(cat.id, n);
   });
   state.tree = manifest.categories;
   state.flatIndex = flat;
+  state.counts = counts;
 }
 
 // ============================================================
@@ -167,6 +186,15 @@ function countInCategory(cat) {
   return n;
 }
 
+// 搜索态标题高亮：纯文本层定位匹配区间，分段转义后拼接
+function highlightName(name, kw) {
+  const i = kw ? name.toLowerCase().indexOf(kw) : -1;
+  if (i < 0) return escapeHtml(name);
+  return `${escapeHtml(name.slice(0, i))}<mark>${escapeHtml(name.slice(i, i + kw.length))}</mark>${escapeHtml(
+    name.slice(i + kw.length),
+  )}`;
+}
+
 // ============================================================
 // 渲染：导航
 // ============================================================
@@ -178,7 +206,7 @@ function navBtn(id, name, count) {
 function renderNav() {
   document.getElementById("catNav").innerHTML =
     navBtn(ALL, "全部", state.flatIndex.length) +
-    state.tree.map((cat) => navBtn(cat.id, cat.name, countInCategory(cat))).join("");
+    state.tree.map((cat) => navBtn(cat.id, cat.name, state.counts.get(cat.id) || 0)).join("");
   const cat = findCategory(state.currentCat);
   document.getElementById("subNav").innerHTML =
     cat && cat.children
@@ -200,9 +228,10 @@ function rowHtml(entry) {
     .map((p) => `<span>${escapeHtml(p)}</span>`)
     .join('<span class="dot">·</span>');
   const attrs = `data-name="${escapeHtml(f.name)}" data-path="${encodePath(f.path)}"`;
+  const nameHtml = highlightName(f.name, state.keyword);
   const title = canPrev
-    ? `<button class="row-title" data-act="preview" ${attrs}>${escapeHtml(f.name)}</button>`
-    : `<span class="row-title plain">${escapeHtml(f.name)}</span>`;
+    ? `<button class="row-title" data-act="preview" ${attrs}>${nameHtml}</button>`
+    : `<span class="row-title plain">${nameHtml}</span>`;
   const actions = `${canPrev ? `<button class="row-btn" data-act="preview" ${attrs}>${svgIcon("eye")}<span>预览</span></button>` : ""}
         <a class="row-btn" href="${encodePath(f.path)}" download>${svgIcon("download")}<span>下载</span></a>`;
   return `
@@ -215,7 +244,7 @@ function rowHtml(entry) {
 
 function getGroups() {
   if (state.keyword) {
-    return [{ name: "", files: state.flatIndex.filter((x) => x.f.norm.includes(state.keyword)) }];
+    return [{ name: "", files: state.flatIndex.filter((x) => x.norm.includes(state.keyword)) }];
   }
   if (state.currentCat === ALL) {
     return state.tree
@@ -279,6 +308,7 @@ function renderContent() {
         : g.files.map(rowHtml).join(""),
     )
     .join("");
+  state.cursor = -1;
 }
 
 function updateLabel() {
@@ -301,7 +331,7 @@ let lastFocus = null;
 function openPreview(name, path) {
   document.getElementById("modalTitle").textContent = name;
   document.getElementById("modalDownload").href = path;
-  document.getElementById("modalFrame").src = previewSrc(path);
+  document.getElementById("modalFrame").src = path;
   document.getElementById("pdfModal").hidden = false;
   document.body.style.overflow = "hidden";
   lastFocus = document.activeElement;
@@ -322,6 +352,7 @@ function closePreview() {
 // ============================================================
 function switchCategory(id) {
   state.currentCat = id;
+  history.replaceState(null, "", id === ALL ? location.pathname + location.search : "#" + id);
   if (state.keyword) {
     state.keyword = "";
     document.getElementById("searchInput").value = "";
@@ -330,6 +361,15 @@ function switchCategory(id) {
   updateLabel();
   renderContent();
 }
+
+// URL 深链：#files/kaoyan 直达分类视图
+function applyHash() {
+  const id = decodeURIComponent(location.hash.slice(1));
+  if (!id || (id !== ALL && !findCategory(id))) return false;
+  if (id !== state.currentCat) switchCategory(id);
+  return true;
+}
+window.addEventListener("hashchange", applyHash);
 
 ["catNav", "subNav"].forEach((navId) => {
   document.getElementById(navId).addEventListener("click", (e) => {
@@ -347,8 +387,32 @@ document.getElementById("modalClose").addEventListener("click", closePreview);
 document.getElementById("pdfModal").addEventListener("click", (e) => {
   if (e.target === e.currentTarget) closePreview();
 });
+// 键盘：Esc 关弹层、J/K 移动光标、Enter 预览、/ 聚焦搜索
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !document.getElementById("pdfModal").hidden) closePreview();
+  if (e.key === "Escape") {
+    if (!document.getElementById("pdfModal").hidden) closePreview();
+    return;
+  }
+  const inInput = e.target.matches("input, textarea");
+  if (inInput) return;
+  if (e.key === "/") {
+    e.preventDefault();
+    document.getElementById("searchInput").focus();
+    return;
+  }
+  const rows = [...document.querySelectorAll(".file-row")];
+  if (!rows.length) return;
+  if (e.key === "j" || e.key === "k") {
+    e.preventDefault();
+    if (state.cursor < 0) state.cursor = 0;
+    else if (e.key === "j") state.cursor = Math.min(state.cursor + 1, rows.length - 1);
+    else state.cursor = Math.max(state.cursor - 1, 0);
+    rows.forEach((r, i) => r.classList.toggle("cursor", i === state.cursor));
+    rows[state.cursor].scrollIntoView({ block: "nearest" });
+  } else if (e.key === "Enter" && state.cursor >= 0 && rows[state.cursor]) {
+    const btn = rows[state.cursor].querySelector('[data-act="preview"]');
+    if (btn) openPreview(btn.dataset.name, btn.dataset.path);
+  }
 });
 
 // 全局搜索：rAF 节流，Esc 清空
@@ -391,7 +455,8 @@ async function init(forceRefresh = false) {
     const manifest = await loadManifest(forceRefresh);
     buildIndex(manifest);
 
-    if (state.currentCat !== ALL && !findCategory(state.currentCat)) {
+    // hash 指定了合法分类则直达，否则回退「全部」
+    if (!applyHash() && state.currentCat !== ALL && !findCategory(state.currentCat)) {
       state.currentCat = ALL;
     }
 

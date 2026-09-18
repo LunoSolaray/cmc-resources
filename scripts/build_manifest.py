@@ -6,10 +6,10 @@
 目录模型为两层：files/<大类>/ 与 files/<大类>/<子分类>/，
 大类根目录下的散落文件归入「未分类」。显示名与图标在
 CATEGORY_META 中维护；未收录目录回退为目录名 + folder 图标。
+搜索规范化（小写+去空白）由前端加载索引时预计算，不占索引体积。
 """
 
 import json
-import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -40,11 +40,6 @@ CATEGORY_META = {
 CATEGORY_ORDER = {path: i for i, path in enumerate(CATEGORY_META)}
 
 
-def norm(text: str) -> str:
-    """检索规范化：小写 + 去空白，前端用同一规则处理关键词。"""
-    return re.sub(r"\s+", "", text.lower())
-
-
 def sort_dirs(dirs: list[Path]) -> list[Path]:
     def key(d: Path):
         rel = d.relative_to(ROOT).as_posix()
@@ -52,7 +47,7 @@ def sort_dirs(dirs: list[Path]) -> list[Path]:
     return sorted(dirs, key=key)
 
 
-def list_files(dir_path: Path, chain: list[str]) -> list[dict]:
+def list_files(dir_path: Path) -> list[dict]:
     entries = []
     for p in sorted(dir_path.iterdir(), key=lambda x: x.name):
         if not p.is_file() or p.name.startswith("."):
@@ -62,7 +57,6 @@ def list_files(dir_path: Path, chain: list[str]) -> list[dict]:
             "path": p.relative_to(ROOT).as_posix(),
             "ext": p.suffix.lstrip(".").lower(),
             "size": p.stat().st_size,
-            "norm": norm("".join(chain) + p.name),
         })
     return entries
 
@@ -84,7 +78,7 @@ def build() -> None:
             if d.is_dir() and not d.name.startswith(".")
         ])
 
-        loose = list_files(FILES_DIR, [])
+        loose = list_files(FILES_DIR)
         if loose:
             categories.append(make_node("files/_root", "未分类", "box", loose, None))
 
@@ -100,9 +94,12 @@ def build() -> None:
                 sub_name, sub_icon = CATEGORY_META.get(sub_rel, (sub.name, "folder"))
                 children.append(make_node(
                     sub_rel, sub_name, sub_icon,
-                    list_files(sub, [name, sub_name]), None,
+                    list_files(sub), None,
                 ))
-            categories.append(make_node(rel, name, icon, list_files(d, [name]), children or None))
+                for extra in sub.iterdir():
+                    if extra.is_dir() and not extra.name.startswith("."):
+                        print(f"warning: {extra.relative_to(ROOT).as_posix()} 超出两层目录模型，未纳入索引")
+            categories.append(make_node(rel, name, icon, list_files(d), children or None))
 
     manifest = {
         "build": datetime.now(CST).strftime("%Y-%m-%d %H:%M"),
