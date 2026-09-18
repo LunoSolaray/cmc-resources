@@ -1,989 +1,162 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>空曙のCMC资源站</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        :root {
-            --bg-primary: #0a0f1a;
-            --bg-card: rgba(255, 255, 255, 0.04);
-            --bg-card-hover: rgba(255, 255, 255, 0.07);
-            --border-subtle: rgba(255, 255, 255, 0.08);
-            --border-hover: rgba(255, 255, 255, 0.15);
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.3);
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --radius-sm: 8px;
-            --radius-md: 12px;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: -40%; left: -20%;
-            width: 80%; height: 80%;
-            background: radial-gradient(ellipse, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
-            pointer-events: none; z-index: 0;
-        }
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: -40%; right: -20%;
-            width: 80%; height: 80%;
-            background: radial-gradient(ellipse, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
-            pointer-events: none; z-index: 0;
-        }
-
-        .topbar {
-            position: sticky; top: 0; z-index: 100;
-            background: rgba(10, 15, 26, 0.8);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-subtle);
-        }
-        .topbar-inner {
-            max-width: 1400px; margin: 0 auto;
-            padding: 14px 28px;
-            display: flex; align-items: center; justify-content: space-between;
-            gap: 20px;
-        }
-        .brand {
-            display: flex; align-items: center; gap: 10px;
-            text-decoration: none; color: inherit;
-        }
-        .brand-icon {
-            width: 36px; height: 36px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.1rem;
-            box-shadow: 0 4px 12px var(--accent-glow);
-        }
-        .brand-text {
-            font-size: 1.05rem; font-weight: 700;
-            letter-spacing: -0.02em;
-            background: linear-gradient(135deg, #f1f5f9, #94a3b8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .search-wrap { position: relative; flex: 1; max-width: 420px; }
-        .search-wrap input {
-            width: 100%;
-            padding: 10px 16px 10px 42px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-sm);
-            color: var(--text-primary);
-            font-size: 0.875rem;
-            font-family: inherit;
-            outline: none;
-            transition: all 0.25s ease;
-        }
-        .search-wrap input::placeholder { color: var(--text-muted); }
-        .search-wrap input:focus {
-            border-color: var(--accent);
-            background: rgba(59, 130, 246, 0.05);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-        .search-wrap::before {
-            content: '';
-            position: absolute; left: 14px; top: 50%;
-            transform: translateY(-50%);
-            width: 16px; height: 16px;
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E") no-repeat center;
-            pointer-events: none;
-        }
-
-        .layout {
-            flex: 1;
-            max-width: 1400px; width: 100%;
-            margin: 0 auto;
-            padding: 24px 28px;
-            display: flex; gap: 24px;
-            position: relative; z-index: 1;
-        }
-
-        .sidebar {
-            width: 250px; flex-shrink: 0;
-            position: sticky; top: 90px;
-            height: fit-content;
-            display: flex; flex-direction: column;
-            gap: 12px;
-        }
-        .sidebar-title {
-            font-size: 0.7rem; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.08em;
-            color: var(--text-muted);
-            padding: 0 12px; margin-bottom: 4px;
-        }
-        .cat-list { display: flex; flex-direction: column; gap: 2px; }
-
-        .cat-item {
-            display: flex; align-items: center; gap: 9px;
-            padding: 9px 12px;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: none; background: transparent;
-            color: var(--text-secondary);
-            font-size: 0.85rem; font-family: inherit;
-            font-weight: 500;
-            width: 100%; text-align: left;
-        }
-        .cat-item:hover {
-            background: var(--bg-card);
-            color: var(--text-primary);
-        }
-        .cat-item.active {
-            background: rgba(59, 130, 246, 0.12);
-            color: #60a5fa;
-        }
-
-        .cat-item.parent {
-            font-weight: 600;
-            color: var(--text-primary);
-            font-size: 0.875rem;
-        }
-        .cat-item.parent.active { color: #60a5fa; }
-
-        .cat-item.sub {
-            padding-left: 44px;
-            font-size: 0.82rem;
-            font-weight: 500;
-        }
-
-        .cat-arrow {
-            width: 12px; height: 12px;
-            display: flex; align-items: center; justify-content: center;
-            color: var(--text-muted);
-            font-size: 0.6rem;
-            transition: transform 0.2s ease;
-            flex-shrink: 0;
-        }
-        .cat-arrow.open { transform: rotate(90deg); }
-        .cat-arrow.placeholder { visibility: hidden; }
-
-        .cat-icon {
-            font-size: 1rem; width: 20px;
-            text-align: center; flex-shrink: 0;
-        }
-        .cat-name {
-            flex: 1; min-width: 0;
-            white-space: nowrap; overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .cat-count {
-            font-size: 0.7rem;
-            background: rgba(255, 255, 255, 0.06);
-            padding: 1px 7px;
-            border-radius: 20px;
-            color: var(--text-muted);
-            font-weight: 500; flex-shrink: 0;
-        }
-        .cat-item.active .cat-count {
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
-        }
-
-        .sidebar-footer {
-            margin-top: 8px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border-subtle);
-        }
-        .refresh-btn {
-            display: flex; align-items: center; justify-content: center;
-            gap: 6px;
-            width: 100%;
-            padding: 8px 12px;
-            background: transparent;
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-sm);
-            color: var(--text-secondary);
-            font-size: 0.78rem;
-            font-family: inherit;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .refresh-btn:hover {
-            background: var(--bg-card);
-            color: var(--text-primary);
-            border-color: var(--border-hover);
-        }
-        .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .refresh-btn svg { width: 12px; height: 12px; }
-        .refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
-
-        .content { flex: 1; min-width: 0; }
-        .content-header {
-            display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 20px;
-            flex-wrap: wrap; gap: 12px;
-        }
-        .section-label {
-            font-size: 1.15rem; font-weight: 700;
-            letter-spacing: -0.02em;
-        }
-        .result-count { font-size: 0.8rem; color: var(--text-muted); }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 14px;
-        }
-
-        .file-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: var(--radius-md);
-            padding: 18px;
-            display: flex; flex-direction: column;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative; overflow: hidden;
-        }
-        .file-card::before {
-            content: '';
-            position: absolute; top: 0; left: 0; right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent), transparent);
-            opacity: 0; transition: opacity 0.3s ease;
-        }
-        .file-card:hover {
-            background: var(--bg-card-hover);
-            border-color: var(--border-hover);
-            transform: translateY(-3px);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
-        }
-        .file-card:hover::before { opacity: 1; }
-
-        .card-top {
-            display: flex; align-items: flex-start;
-            gap: 12px; margin-bottom: 16px;
-        }
-        .file-icon-box {
-            width: 44px; height: 44px;
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.3rem; flex-shrink: 0;
-            background: rgba(59, 130, 246, 0.1);
-        }
-        .file-icon-box.pdf { background: rgba(239, 68, 68, 0.12); }
-        .file-icon-box.doc { background: rgba(59, 130, 246, 0.12); }
-        .file-icon-box.xls { background: rgba(16, 185, 129, 0.12); }
-        .file-icon-box.zip { background: rgba(245, 158, 11, 0.12); }
-        .file-icon-box.img { background: rgba(139, 92, 246, 0.12); }
-        .file-icon-box.video { background: rgba(236, 72, 153, 0.12); }
-
-        .file-info { flex: 1; min-width: 0; }
-        .file-name {
-            font-size: 0.9rem; font-weight: 600;
-            color: var(--text-primary);
-            line-height: 1.35; margin-bottom: 4px;
-            word-break: break-word;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .file-ext {
-            font-size: 0.7rem; color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em; font-weight: 500;
-        }
-
-        .download-btn {
-            margin-top: auto;
-            display: flex; align-items: center; justify-content: center;
-            gap: 6px;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: #fff; text-decoration: none;
-            padding: 9px 0;
-            border-radius: var(--radius-sm);
-            font-size: 0.82rem; font-weight: 600;
-            transition: all 0.2s ease;
-            border: none; cursor: pointer;
-            width: 100%; font-family: inherit;
-            box-shadow: 0 2px 8px var(--accent-glow);
-        }
-        .download-btn:hover {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            box-shadow: 0 4px 16px var(--accent-glow);
-            transform: translateY(-1px);
-        }
-        .download-btn:active { transform: translateY(0); }
-
-        .empty {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-muted);
-        }
-        .empty-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.5; }
-        .empty-text { font-size: 0.95rem; }
-
-        .status-state { text-align: center; padding: 80px 20px; }
-        .spinner {
-            width: 36px; height: 36px;
-            border: 3px solid rgba(255,255,255,0.08);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 18px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .status-text { font-size: 0.9rem; color: var(--text-secondary); }
-        .status-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
-        .error-icon { font-size: 2.5rem; margin-bottom: 14px; }
-        .error-title {
-            font-size: 1rem; font-weight: 700;
-            color: var(--danger); margin-bottom: 8px;
-        }
-        .error-msg {
-            font-size: 0.82rem; color: var(--text-secondary);
-            max-width: 520px; margin: 0 auto;
-            line-height: 1.7;
-        }
-        .error-msg code {
-            background: rgba(255,255,255,0.06);
-            padding: 1px 6px;
-            border-radius: 4px;
-            font-size: 0.78rem;
-            color: var(--accent);
-        }
-
-        .disclaimer-section {
-            max-width: 1400px;
-            margin: 20px auto 0;
-            padding: 0 28px;
-            position: relative; z-index: 1;
-        }
-        .disclaimer-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-left: 3px solid var(--warning);
-            border-radius: var(--radius-md);
-            padding: 24px 28px;
-        }
-        .disclaimer-header {
-            display: flex; align-items: center; gap: 8px;
-            font-size: 0.95rem; font-weight: 700;
-            color: var(--warning); margin-bottom: 14px;
-        }
-        .disclaimer-body p {
-            font-size: 0.82rem; line-height: 1.8;
-            color: var(--text-secondary);
-            margin-bottom: 6px;
-        }
-        .disclaimer-body p:last-child { margin-bottom: 0; }
-        .disclaimer-body strong {
-            color: var(--text-primary); font-weight: 600;
-        }
-        .disclaimer-contact {
-            margin-top: 14px !important;
-            padding-top: 12px;
-            border-top: 1px solid var(--border-subtle);
-            font-size: 0.78rem !important;
-            color: var(--text-muted) !important;
-        }
-
-        .footer {
-            text-align: center;
-            padding: 32px 28px;
-            font-size: 0.78rem;
-            color: var(--text-muted);
-            border-top: 1px solid var(--border-subtle);
-            margin-top: 40px;
-            position: relative; z-index: 1;
-        }
-        .footer .highlight {
-            color: var(--text-secondary); font-weight: 600;
-        }
-
-        @media (max-width: 900px) {
-            .layout {
-                flex-direction: column;
-                padding: 16px; gap: 16px;
-            }
-            .sidebar { width: 100%; position: static; }
-            .sidebar-title { display: none; }
-            .cat-item.sub { padding-left: 34px; }
-            .topbar-inner {
-                padding: 12px 16px; flex-wrap: wrap;
-            }
-            .search-wrap {
-                max-width: 100%; order: 3; flex-basis: 100%;
-            }
-            .grid { grid-template-columns: 1fr; }
-            .disclaimer-section { padding: 0 16px; }
-            .disclaimer-card { padding: 18px 20px; }
-        }
-
-        @media (max-width: 400px) {
-            .brand-text { font-size: 0.95rem; }
-            .file-card { padding: 14px; }
-            .file-icon-box { width: 38px; height: 38px; font-size: 1.1rem; }
-        }
-    </style>
-</head>
-<body>
-
-<header class="topbar">
-    <div class="topbar-inner">
+    <link rel="stylesheet" href="assets/css/style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
         <a href="#" class="brand">
-            <div class="brand-icon">📁</div>
-            <span class="brand-text">空曙のCMC资源站</span>
+          <span class="brand-icon">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
+          </span>
+          <span class="brand-text">空曙のCMC资源站</span>
         </a>
         <div class="search-wrap">
-            <input type="text" id="searchInput" placeholder="搜索资源名称..." autocomplete="off">
+          <input type="text" id="searchInput" placeholder="搜索全部资源…" autocomplete="off" />
         </div>
-    </div>
-</header>
+      </div>
+      <nav class="cat-nav" id="catNav"></nav>
+      <nav class="sub-nav" id="subNav"></nav>
+    </header>
 
-<div class="layout">
-    <aside class="sidebar">
-        <div class="sidebar-title">资源分类</div>
-        <div class="cat-list" id="catList"></div>
-        <div class="sidebar-footer">
-            <button class="refresh-btn" id="refreshBtn" title="重新扫描 GitHub 仓库">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="23 4 23 10 17 10"/>
-                    <polyline points="1 20 1 14 7 14"/>
-                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                </svg>
-                <span>刷新索引</span>
-            </button>
+    <main class="page">
+      <div class="content-header">
+        <div class="section-label" id="sectionLabel">加载中…</div>
+        <div class="header-side">
+          <span class="result-count" id="resultCount"></span>
+          <button class="refresh-btn" id="refreshBtn" title="重新加载索引">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+          </button>
         </div>
-    </aside>
-
-    <main class="content">
-        <div class="content-header">
-            <div class="section-label" id="sectionLabel">加载中...</div>
-            <div class="result-count" id="resultCount"></div>
-        </div>
-        <div id="content"></div>
+      </div>
+      <div id="content"></div>
     </main>
-</div>
 
-<div class="disclaimer-section">
-    <div class="disclaimer-card">
-        <div class="disclaimer-header">⚠️ 免责声明</div>
-        <div class="disclaimer-body">
-            <p><strong>站点说明：</strong>本站「空曙のCMC资源站」由空曙个人部署，为纯粹的非营利性个人站点，主要用于免费分享数学竞赛、考研数学等相关学习资源，不涉及任何商业用途。</p>
-            <p><strong>内容来源：</strong>本站专题类内容均按《全国大学生数学竞赛解析手册》（红皮书）的结构整理，相关内容均来源于公开视频；其余资源均来自网络公开渠道收集整理。本站仅对资源进行整理与汇总，不参与制作、修改或销售任何原始资料。</p>
-            <p><strong>版权归属：</strong>所有资源的著作权均归原作者或合法权利人所有。本站不对资源的准确性、完整性与合法性作任何形式的保证。若您认为本站内容侵犯了您的合法权益，请通过下方联系方式告知，我们将在核实后第一时间删除相关资源。</p>
-            <p><strong>使用风险：</strong>用户下载并使用本站资源所产生的任何后果，由用户自行承担。因使用本站资源导致的任何直接或间接损失，本站不承担任何责任。</p>
-            <p><strong>禁止行为：</strong>严禁将本站资源用于任何商业用途、非法传播或违反当地法律法规的活动。如因用户个人行为引发法律纠纷，责任由用户自负。</p>
-            <p><strong>最终解释权：</strong>本站保留对免责声明的最终解释权，并有权随时修改、更新本声明内容，修改后的条款自公布之日起生效。</p>
-            <p class="disclaimer-contact">如有任何问题、建议或侵权投诉，请在相关QQ交流群联系空曙，群号：<strong>1064861550</strong></p>
+    <div class="disclaimer-section">
+      <div class="disclaimer-card">
+        <div class="disclaimer-header">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+            />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          免责声明
         </div>
+        <div class="disclaimer-body">
+          <p>
+            <strong>站点说明：</strong
+            >本站「空曙のCMC资源站」由空曙个人部署，为纯粹的非营利性个人站点，主要用于免费分享数学竞赛、考研数学等相关学习资源，不涉及任何商业用途。
+          </p>
+          <p>
+            <strong>内容来源：</strong
+            >本站专题类内容均按《全国大学生数学竞赛解析手册》（红皮书）的结构整理，相关内容均来源于公开视频；其余资源均来自网络公开渠道收集整理。本站仅对资源进行整理与汇总，不参与制作、修改或销售任何原始资料。
+          </p>
+          <p>
+            <strong>版权归属：</strong
+            >所有资源的著作权均归原作者或合法权利人所有。本站不对资源的准确性、完整性与合法性作任何形式的保证。若您认为本站内容侵犯了您的合法权益，请通过下方联系方式告知，我们将在核实后第一时间删除相关资源。
+          </p>
+          <p>
+            <strong>使用风险：</strong
+            >用户下载并使用本站资源所产生的任何后果，由用户自行承担。因使用本站资源导致的任何直接或间接损失，本站不承担任何责任。
+          </p>
+          <p>
+            <strong>禁止行为：</strong
+            >严禁将本站资源用于任何商业用途、非法传播或违反当地法律法规的活动。如因用户个人行为引发法律纠纷，责任由用户自负。
+          </p>
+          <p>
+            <strong>最终解释权：</strong
+            >本站保留对免责声明的最终解释权，并有权随时修改、更新本声明内容，修改后的条款自公布之日起生效。
+          </p>
+          <p class="disclaimer-contact">
+            如有任何问题、建议或侵权投诉，请在相关QQ交流群联系空曙，群号：<strong
+              >1064861550</strong
+            >
+          </p>
+        </div>
+      </div>
     </div>
-</div>
 
-<footer class="footer">
-    © 2026 <span class="highlight">空曙のCMC资源站</span> · 仅供学习交流 · 请支持正版
-</footer>
+    <footer class="footer">
+      © 2026 <span class="highlight">空曙のCMC资源站</span> · 仅供学习交流 · 请支持正版
+      <div class="footer-time">索引更新于 <span id="indexTime">—</span></div>
+    </footer>
 
-<script>
-    // ============================================================
-    // ⚙️ GitHub 配置
-    //   部署到 GitHub Pages 会自动识别 owner / repo
-    //   使用自定义域名的话，手动填写下面两个字段
-    // ============================================================
-    function detectGitHubInfo() {
-        const host = window.location.hostname;
-        const path = window.location.pathname;
-        const m = host.match(/^([^.]+)\.github\.io$/);
-        if (m) {
-            const owner = m[1];
-            const segs = path.split('/').filter(Boolean);
-            const repo = segs[0] || '';
-            if (owner && repo) return { owner, repo };
-        }
-        return null;
-    }
-    const detected = detectGitHubInfo();
+    <div class="modal-mask" id="pdfModal" hidden>
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <div class="modal-title" id="modalTitle"></div>
+          <div class="modal-actions">
+            <a class="row-btn" id="modalDownload" href="#" download>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>下载</span>
+            </a>
+            <button class="row-btn" id="modalClose">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              <span>关闭</span>
+            </button>
+          </div>
+        </div>
+        <iframe id="modalFrame" title="文档预览"></iframe>
+      </div>
+    </div>
 
-    const GITHUB_CONFIG = {
-        owner: detected?.owner || 'your-username',
-        repo:  detected?.repo  || 'your-repo',
-        branch: 'main',
-        rootPath: 'files',
-        cacheMinutes: 30,
-    };
-
-    // ============================================================
-    // 🏷️ 文件夹 → 中文显示名
-    //    按完整路径匹配
-    //    以后加文件夹，在这里加一行
-    // ============================================================
-    const NAME_MAP = {
-        // 顶层大类
-        'files/guide':         '竞赛指导手册',
-        'files/video':         '视频内容全一册',
-        'files/prelim':        'CMC初赛',
-        'files/final':         'CMC决赛',
-        'files/henan':         '河南复赛',
-        'files/kaoyan':        '考研数学',
-        // CMC初赛 子分类
-        'files/prelim/basic':  '相关基础专题',
-        'files/prelim/past':   '官方模拟卷',
-        // CMC决赛 子分类
-        'files/final/adv':     '相关进阶专题',
-        'files/final/past':    '官方模拟卷',
-        'files/final/linear':  '线性代数专题',
-        // 河南复赛 子分类
-        'files/henan/topic':   '相关专题',
-        'files/henan/past':    '历年真题',
-        // 考研数学 子分类
-        'files/kaoyan/gaoshu': '高等数学',
-        'files/kaoyan/linear': '线性代数',
-        'files/kaoyan/prob':   '概率论',
-    };
-
-    // ============================================================
-    // 🎨 文件夹图标
-    // ============================================================
-    const FOLDER_ICONS = {
-        'files/guide':         '📖',
-        'files/video':         '🎬',
-        'files/prelim':        '📘',
-        'files/prelim/basic':  '📄',
-        'files/prelim/past':   '📝',
-        'files/final':         '📕',
-        'files/final/adv':     '📄',
-        'files/final/past':    '📝',
-        'files/final/linear':  '📐',
-        'files/henan':         '🏆',
-        'files/henan/topic':   '📄',
-        'files/henan/past':    '📝',
-        'files/kaoyan':        '🎓',
-        'files/kaoyan/gaoshu': '📐',
-        'files/kaoyan/linear': '📐',
-        'files/kaoyan/prob':   '🎲',
-    };
-
-    // ============================================================
-    // 📄 文件扩展名图标
-    // ============================================================
-    const ICON_MAP = {
-        pdf: { icon: "📕", cls: "pdf" },
-        doc: { icon: "📘", cls: "doc" }, docx: { icon: "📘", cls: "doc" },
-        xls: { icon: "📗", cls: "xls" }, xlsx: { icon: "📗", cls: "xls" },
-        ppt: { icon: "📙", cls: "doc" }, pptx: { icon: "📙", cls: "doc" },
-        zip: { icon: "🗜️", cls: "zip" }, rar: { icon: "🗜️", cls: "zip" }, "7z": { icon: "🗜️", cls: "zip" },
-        txt: { icon: "📄", cls: "doc" },
-        png: { icon: "🖼️", cls: "img" }, jpg: { icon: "🖼️", cls: "img" },
-        jpeg: { icon: "🖼️", cls: "img" }, gif: { icon: "🖼️", cls: "img" },
-        svg: { icon: "🖼️", cls: "img" },
-        mp4: { icon: "🎬", cls: "video" }, mp3: { icon: "🎵", cls: "video" },
-        mov: { icon: "🎬", cls: "video" }, avi: { icon: "🎬", cls: "video" }
-    };
-
-    // ============================================================
-    // 状态
-    // ============================================================
-    const state = {
-        tree: [],
-        currentCat: null,
-        expanded: new Set(),
-        keyword: "",
-        loading: true,
-        error: null,
-    };
-
-    const CACHE_KEY = 'cmc-site-tree-v1';
-
-    // ============================================================
-    // 工具
-    // ============================================================
-    function getExt(filename) {
-        return filename.split('.').pop().toLowerCase();
-    }
-    function getFileMeta(file) {
-        const ext = getExt(file);
-        return ICON_MAP[ext] || { icon: "📎", cls: "" };
-    }
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-    function getDisplayName(path, fallback) {
-        return NAME_MAP[path] || fallback;
-    }
-    function getFolderIcon(path) {
-        return FOLDER_ICONS[path] || '📁';
-    }
-
-    // ============================================================
-    // GitHub API
-    // ============================================================
-    async function fetchDirectory(path) {
-        const encoded = encodeURI(path).replace(/#/g, '%23');
-        const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${encoded}?ref=${GITHUB_CONFIG.branch}`;
-        const res = await fetch(url, { cache: 'no-cache' });
-        if (res.status === 404) {
-            throw new Error(`路径不存在：${path}。请检查 owner / repo / branch / rootPath 配置。`);
-        }
-        if (res.status === 403) {
-            throw new Error('GitHub API 请求频率超限，请稍后重试。');
-        }
-        if (!res.ok) {
-            throw new Error(`GitHub API 错误：HTTP ${res.status}`);
-        }
-        return res.json();
-    }
-
-    // 构建大类节点（带子分类）
-    async function buildTopCategory(path, folderName) {
-        const items = await fetchDirectory(path);
-        const dirs = items.filter(x => x.type === 'dir');
-        const directFiles = items.filter(x => x.type === 'file' && !x.name.startsWith('.'));
-
-        const node = {
-            id: path,
-            name: getDisplayName(path, folderName),
-            path: path,
-            icon: getFolderIcon(path),
-            files: directFiles.map(f => ({ name: f.name, path: f.path })),
-            children: [],
-        };
-
-        for (const d of dirs) {
-            const subItems = await fetchDirectory(d.path);
-            const subFiles = subItems.filter(x => x.type === 'file' && !x.name.startsWith('.'));
-            node.children.push({
-                id: d.path,
-                name: getDisplayName(d.path, d.name),
-                path: d.path,
-                icon: getFolderIcon(d.path),
-                files: subFiles.map(f => ({ name: f.name, path: f.path })),
-                children: null,
-            });
-        }
-
-        if (node.children.length === 0) node.children = null;
-        return node;
-    }
-
-    async function loadTree() {
-        const cached = loadCache();
-        if (cached) return cached;
-
-        const rootItems = await fetchDirectory(GITHUB_CONFIG.rootPath);
-        const topDirs = rootItems.filter(x => x.type === 'dir');
-        const rootFiles = rootItems.filter(x => x.type === 'file' && !x.name.startsWith('.'));
-
-        // 按 NAME_MAP 中出现的顺序排
-        const orderKeys = Object.keys(NAME_MAP).filter(k => k.split('/').length === 2);
-        topDirs.sort((a, b) => {
-            const ia = orderKeys.indexOf(a.path);
-            const ib = orderKeys.indexOf(b.path);
-            if (ia >= 0 && ib >= 0) return ia - ib;
-            if (ia >= 0) return -1;
-            if (ib >= 0) return 1;
-            return a.name.localeCompare(b.name, 'en');
-        });
-
-        const tree = [];
-
-        if (rootFiles.length > 0) {
-            tree.push({
-                id: GITHUB_CONFIG.rootPath + '/_root',
-                name: '未分类',
-                path: GITHUB_CONFIG.rootPath,
-                icon: '📦',
-                files: rootFiles.map(f => ({ name: f.name, path: f.path })),
-                children: null,
-            });
-        }
-
-        for (const d of topDirs) {
-            tree.push(await buildTopCategory(d.path, d.name));
-        }
-
-        saveCache(tree);
-        return tree;
-    }
-
-    // ============================================================
-    // 缓存
-    // ============================================================
-    function loadCache() {
-        try {
-            const raw = sessionStorage.getItem(CACHE_KEY);
-            if (!raw) return null;
-            const data = JSON.parse(raw);
-            const ttl = (GITHUB_CONFIG.cacheMinutes || 30) * 60 * 1000;
-            if (Date.now() - data.time > ttl) return null;
-            if (data.owner !== GITHUB_CONFIG.owner || data.repo !== GITHUB_CONFIG.repo) return null;
-            return data.tree;
-        } catch (e) { return null; }
-    }
-    function saveCache(tree) {
-        try {
-            sessionStorage.setItem(CACHE_KEY, JSON.stringify({
-                time: Date.now(),
-                owner: GITHUB_CONFIG.owner,
-                repo: GITHUB_CONFIG.repo,
-                tree: tree,
-            }));
-        } catch (e) {}
-    }
-    function clearCache() {
-        try { sessionStorage.removeItem(CACHE_KEY); } catch (e) {}
-    }
-
-    // ============================================================
-    // 分类查询
-    // ============================================================
-    function findCategory(id) {
-        for (const cat of state.tree) {
-            if (cat.id === id) return cat;
-            if (cat.children) {
-                for (const child of cat.children) {
-                    if (child.id === id) return child;
-                }
-            }
-        }
-        return null;
-    }
-    function collectFiles(cat) {
-        let files = [...cat.files];
-        if (cat.children) for (const c of cat.children) files.push(...c.files);
-        return files;
-    }
-    function countInCategory(cat) {
-        return collectFiles(cat).length;
-    }
-
-    // ============================================================
-    // 渲染
-    // ============================================================
-    function renderSidebar() {
-        const list = document.getElementById('catList');
-        let html = '';
-
-        state.tree.forEach(parent => {
-            const hasChildren = parent.children && parent.children.length > 0;
-            const isExpanded = state.expanded.has(parent.id);
-            const isActive = state.currentCat === parent.id;
-            const count = countInCategory(parent);
-
-            const arrowCls = hasChildren
-                ? `cat-arrow ${isExpanded ? 'open' : ''}`
-                : 'cat-arrow placeholder';
-            const arrowChar = hasChildren ? '▶' : '';
-
-            html += `
-                <button class="cat-item parent ${isActive ? 'active' : ''}"
-                        data-cat="${escapeHtml(parent.id)}"
-                        data-has-children="${hasChildren}">
-                    <span class="${arrowCls}">${arrowChar}</span>
-                    <span class="cat-icon">${parent.icon}</span>
-                    <span class="cat-name">${escapeHtml(parent.name)}</span>
-                    <span class="cat-count">${count}</span>
-                </button>
-            `;
-
-            if (hasChildren && isExpanded) {
-                parent.children.forEach(child => {
-                    const childActive = state.currentCat === child.id;
-                    const childCount = child.files.length;
-                    html += `
-                        <button class="cat-item sub ${childActive ? 'active' : ''}"
-                                data-cat="${escapeHtml(child.id)}"
-                                data-has-children="false">
-                            <span class="cat-icon">${child.icon}</span>
-                            <span class="cat-name">${escapeHtml(child.name)}</span>
-                            <span class="cat-count">${childCount}</span>
-                        </button>
-                    `;
-                });
-            }
-        });
-
-        list.innerHTML = html;
-
-        list.querySelectorAll('.cat-item').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const catId = btn.dataset.cat;
-                const hasChildren = btn.dataset.hasChildren === 'true';
-                if (hasChildren) {
-                    if (state.expanded.has(catId)) state.expanded.delete(catId);
-                    else state.expanded.add(catId);
-                    state.currentCat = catId;
-                } else {
-                    state.currentCat = catId;
-                }
-                renderSidebar();
-                renderContent();
-                updateLabel();
-            });
-        });
-    }
-
-    function getFiltered() {
-        const cat = findCategory(state.currentCat);
-        if (!cat) return [];
-        let list = collectFiles(cat);
-        if (state.keyword) {
-            const kw = state.keyword;
-            list = list.filter(f =>
-                f.name.toLowerCase().includes(kw) ||
-                getExt(f.path).includes(kw)
-            );
-        }
-        return list;
-    }
-
-    function updateLabel() {
-        const cat = findCategory(state.currentCat);
-        document.getElementById('sectionLabel').textContent = cat ? cat.name : '资源';
-    }
-
-    function cardHtml(f) {
-        const ext = getExt(f.path);
-        const meta = getFileMeta(f.path);
-
-        return `
-            <div class="file-card">
-                <div class="card-top">
-                    <div class="file-icon-box ${meta.cls}">${meta.icon}</div>
-                    <div class="file-info">
-                        <div class="file-name">${escapeHtml(f.name)}</div>
-                        <div class="file-ext">${ext.toUpperCase()}</div>
-                    </div>
-                </div>
-                <a class="download-btn" href="${encodeURI(f.path)}" download>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    下载
-                </a>
-            </div>
-        `;
-    }
-
-    function renderContent() {
-        const content = document.getElementById('content');
-        const countEl = document.getElementById('resultCount');
-
-        if (state.loading) {
-            content.innerHTML = `
-                <div class="status-state">
-                    <div class="spinner"></div>
-                    <div class="status-text">正在索引 GitHub 仓库...</div>
-                    <div class="status-sub">第一次加载可能需要几秒钟</div>
-                </div>
-            `;
-            countEl.textContent = '';
-            return;
-        }
-
-        if (state.error) {
-            content.innerHTML = `
-                <div class="status-state">
-                    <div class="error-icon">⚠️</div>
-                    <div class="error-title">加载失败</div>
-                    <div class="error-msg">${escapeHtml(state.error)}</div>
-                </div>
-            `;
-            countEl.textContent = '';
-            return;
-        }
-
-        const list = getFiltered();
-        countEl.textContent = `${list.length} 个文件`;
-
-        if (list.length === 0) {
-            content.innerHTML = `
-                <div class="empty">
-                    <div class="empty-icon">🔍</div>
-                    <div class="empty-text">没有找到匹配的文件</div>
-                </div>
-            `;
-            return;
-        }
-
-        content.innerHTML = `<div class="grid">${list.map(cardHtml).join('')}</div>`;
-    }
-
-    // ============================================================
-    // 初始化
-    // ============================================================
-    async function init(forceRefresh = false) {
-        state.loading = true;
-        state.error = null;
-        renderContent();
-
-        if (forceRefresh) clearCache();
-
-        try {
-            const tree = await loadTree();
-            state.tree = tree;
-
-            const exists = state.currentCat && findCategory(state.currentCat);
-            if (!exists) {
-                state.currentCat = tree.length > 0 ? tree[0].id : null;
-            }
-
-            // 默认展开所有大类
-            tree.forEach(cat => {
-                if (cat.children && cat.children.length > 0) {
-                    state.expanded.add(cat.id);
-                }
-            });
-
-            state.loading = false;
-            renderSidebar();
-            updateLabel();
-            renderContent();
-        } catch (e) {
-            console.error(e);
-            state.loading = false;
-            state.error = e.message || '未知错误';
-            renderContent();
-        }
-    }
-
-    document.getElementById('searchInput').addEventListener('input', function(e) {
-        state.keyword = e.target.value.trim().toLowerCase();
-        renderContent();
-    });
-
-    document.getElementById('refreshBtn').addEventListener('click', async function() {
-        const btn = this;
-        btn.disabled = true;
-        btn.classList.add('spinning');
-        await init(true);
-        btn.disabled = false;
-        btn.classList.remove('spinning');
-    });
-
-    init();
-</script>
-
-</body>
+    <script src="assets/js/app.js"></script>
+  </body>
 </html>
