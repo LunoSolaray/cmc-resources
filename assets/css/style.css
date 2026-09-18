@@ -177,8 +177,8 @@ body {
 }
 .cat-count {
   font-size: 0.66rem;
-  color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.08);
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 500;
@@ -260,21 +260,33 @@ body {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin: 26px 0 4px;
+  margin: 30px 0 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 .group-head:first-child {
   margin-top: 8px;
 }
 .group-name {
   font-family: var(--serif);
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   letter-spacing: 0.03em;
 }
+.group-name::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 0.85em;
+  background: var(--accent);
+  border-radius: 2px;
+  margin-right: 8px;
+  vertical-align: -0.08em;
+}
 .group-count {
-  font-size: 0.7rem;
-  color: var(--text-muted);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
 }
 
 /* ---- 归档条目行 ---- */
