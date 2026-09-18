@@ -512,6 +512,22 @@ body {
   margin: 0 auto;
   line-height: 1.7;
 }
+.retry-btn {
+  margin-top: 18px;
+  padding: 8px 24px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.retry-btn:hover {
+  color: var(--accent-soft);
+  border-color: var(--accent);
+}
 
 /* ============================================================
    免责声明与页脚

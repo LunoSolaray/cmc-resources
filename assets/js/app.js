@@ -122,7 +122,11 @@ async function loadManifest(force = false) {
   if (!res.ok) {
     throw new Error(`索引加载失败：HTTP ${res.status}`);
   }
-  return res.json();
+  try {
+    return await res.json();
+  } catch {
+    throw new Error("索引响应不是合法 JSON：重新运行 scripts/build_manifest.py 生成索引");
+  }
 }
 
 // 搜索规范化：小写 + 去空白。加载索引时对「分类链+文件名」预计算，不占索引体积
@@ -279,6 +283,7 @@ function renderContent() {
             ${svgIcon("alert", "error-svg")}
             <div class="error-title">加载失败</div>
             <div class="error-msg">${escapeHtml(state.error)}</div>
+            <button class="retry-btn" data-act="retry">重新加载</button>
         </div>`;
     countEl.textContent = "";
     return;
@@ -379,6 +384,10 @@ window.addEventListener("hashchange", applyHash);
 });
 
 document.getElementById("content").addEventListener("click", (e) => {
+  if (e.target.closest('[data-act="retry"]')) {
+    init(true);
+    return;
+  }
   const btn = e.target.closest('[data-act="preview"]');
   if (btn) openPreview(btn.dataset.name, btn.dataset.path);
 });
@@ -469,7 +478,11 @@ async function init(forceRefresh = false) {
   } catch (e) {
     console.error(e);
     state.loading = false;
-    state.error = e.message || "未知错误";
+    // fetch 网络层失败（断网、服务未启动）抛 TypeError，映射为可操作的中文指引
+    state.error =
+      e instanceof TypeError
+        ? "网络请求失败：请检查网络连接，或确认本地服务已启动"
+        : e.message || "未知错误";
     renderContent();
   }
 }
