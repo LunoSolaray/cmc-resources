@@ -48,16 +48,26 @@ def sort_dirs(dirs: list[Path]) -> list[Path]:
     return sorted(dirs, key=key)
 
 
+def safe_name(s: str) -> str:
+    """垃圾字节文件名（Linux CI 上经 surrogateescape 进入 str）降级为 U+FFFD，
+    避免 json 序列化时 UnicodeEncodeError。正常名不受影响。"""
+    return s.encode("utf-8", "surrogateescape").decode("utf-8", "replace")
+
+
 def list_files(dir_path: Path) -> list[dict]:
     entries = []
     for p in sorted(dir_path.iterdir(), key=lambda x: x.name):
         if not p.is_file() or p.name.startswith("."):
             continue
+        try:
+            size = p.stat().st_size
+        except OSError:
+            continue  # 枚举与 stat 之间被删除/无权限，跳过
         entries.append({
-            "name": p.name,
-            "path": p.relative_to(ROOT).as_posix(),
-            "ext": p.suffix.lstrip(".").lower(),
-            "size": p.stat().st_size,
+            "name": safe_name(p.name),
+            "path": safe_name(p.relative_to(ROOT).as_posix()),
+            "ext": safe_name(p.suffix).lstrip(".").lower(),
+            "size": size,
         })
     return entries
 

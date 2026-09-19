@@ -31,6 +31,7 @@ const SVG_PATHS = {
   download:
     '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
   search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
   eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
   alert:
     '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
@@ -92,6 +93,26 @@ function escapeHtml(text) {
   return div.innerHTML.replace(/"/g, "&quot;");
 }
 
+// 设备与环境分流：移动端浏览器不支持 iframe 内嵌 PDF（iOS 仅渲染首页且不可滚动，
+// Android 多直接触发下载），触屏统一交给平台原生查看器；微信/QQ 内置内核对
+// PDF 支持最差，跳转前给出提示。
+const IS_TOUCH = window.matchMedia("(pointer: coarse)").matches;
+const IS_WECHAT = /MicroMessenger|QQ\//i.test(navigator.userAgent);
+
+let toastTimer = 0;
+function toast(msg) {
+  let el = document.getElementById("toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
+}
+
 // ============================================================
 // 状态
 // ============================================================
@@ -131,7 +152,9 @@ async function loadManifest(force = false) {
 
 // 搜索规范化：小写 + 去空白。加载索引时对「分类链+文件名」预计算，不占索引体积
 function normText(s) {
-  return s.toLowerCase().replace(/\s+/g, "");
+  return String(s ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, "");
 }
 
 function buildIndex(manifest) {
@@ -192,6 +215,7 @@ function countInCategory(cat) {
 
 // 搜索态标题高亮：纯文本层定位匹配区间，分段转义后拼接
 function highlightName(name, kw) {
+  name = String(name ?? "");
   const i = kw ? name.toLowerCase().indexOf(kw) : -1;
   if (i < 0) return escapeHtml(name);
   return `${escapeHtml(name.slice(0, i))}<mark>${escapeHtml(name.slice(i, i + kw.length))}</mark>${escapeHtml(
@@ -237,6 +261,7 @@ function rowHtml(entry) {
     ? `<button class="row-title" data-act="preview" ${attrs}>${nameHtml}</button>`
     : `<span class="row-title plain">${nameHtml}</span>`;
   const actions = `${canPrev ? `<button class="row-btn" data-act="preview" ${attrs}>${svgIcon("eye")}<span>预览</span></button>` : ""}
+        <button class="row-btn" data-act="share" ${attrs}>${svgIcon("link")}<span>分享</span></button>
         <a class="row-btn" href="${encodePath(f.path)}" download>${svgIcon("download")}<span>下载</span></a>`;
   return `
     <div class="file-row">
@@ -273,7 +298,7 @@ function renderContent() {
   const countEl = document.getElementById("resultCount");
 
   if (state.loading) {
-    content.innerHTML = `<div class="status-state"><div class="spinner"></div><div class="status-text">正在加载索引…</div></div>`;
+    content.innerHTML = `<div class="skeleton-wrap">${`<div class="skel-row"><div class="skel-icon"></div><div class="skel-lines"><div class="skel-line w62"></div><div class="skel-line w38"></div></div></div>`.repeat(8)}</div>`;
     countEl.textContent = "";
     return;
   }
@@ -334,6 +359,11 @@ function updateLabel() {
 // ============================================================
 let lastFocus = null;
 function openPreview(name, path) {
+  if (IS_TOUCH) {
+    if (IS_WECHAT) toast("内置浏览器对 PDF 支持有限，建议用系统浏览器打开本站");
+    window.location.href = path; // 交给平台原生查看器/下载
+    return;
+  }
   document.getElementById("modalTitle").textContent = name;
   document.getElementById("modalDownload").href = path;
   document.getElementById("modalFrame").src = path;
@@ -357,7 +387,11 @@ function closePreview() {
 // ============================================================
 function switchCategory(id) {
   state.currentCat = id;
-  history.replaceState(null, "", id === ALL ? location.pathname + location.search : "#" + id);
+  history.replaceState(
+    null,
+    "",
+    id === ALL ? location.pathname + location.search : "#" + encodeURIComponent(id),
+  );
   if (state.keyword) {
     state.keyword = "";
     document.getElementById("searchInput").value = "";
@@ -367,11 +401,29 @@ function switchCategory(id) {
   renderContent();
 }
 
-// URL 深链：#files/kaoyan 直达分类视图
+// URL 深链：#files/kaoyan 直达分类视图；#files/kaoyan?f=<编码路径> 直达并打开单文件
 function applyHash() {
-  const id = decodeURIComponent(location.hash.slice(1));
+  const raw = location.hash.slice(1);
+  if (!raw) return false;
+  const qIndex = raw.indexOf("?");
+  let id,
+    fileParam = null;
+  try {
+    id = decodeURIComponent(qIndex < 0 ? raw : raw.slice(0, qIndex));
+    if (qIndex >= 0) {
+      // URLSearchParams.get 自带一次解码，恰好是写入端 encodeURIComponent 的逆运算；
+      // 再手动 decode 会双重解码，文件名本身含 % 字符时抛 URIError 使整条深链失效
+      fileParam = new URLSearchParams(raw.slice(qIndex + 1)).get("f");
+    }
+  } catch {
+    return false; // 畸形百分号序列等非法 hash，忽略
+  }
   if (!id || (id !== ALL && !findCategory(id))) return false;
   if (id !== state.currentCat) switchCategory(id);
+  if (fileParam) {
+    const entry = state.flatIndex.find((x) => x.f.path === fileParam);
+    if (entry) openPreview(entry.f.name, encodePath(fileParam));
+  }
   return true;
 }
 window.addEventListener("hashchange", applyHash);
@@ -389,7 +441,37 @@ document.getElementById("content").addEventListener("click", (e) => {
     return;
   }
   const btn = e.target.closest('[data-act="preview"]');
-  if (btn) openPreview(btn.dataset.name, btn.dataset.path);
+  if (btn) {
+    openPreview(btn.dataset.name, btn.dataset.path);
+    return;
+  }
+  const shareBtn = e.target.closest('[data-act="share"]');
+  if (shareBtn) {
+    const rawPath = decodeURIComponent(shareBtn.dataset.path);
+    const entry = state.flatIndex.find((x) => x.f.path === rawPath);
+    const catId = entry ? entry.topId : state.currentCat;
+    const url = `${location.origin}${location.pathname}#${encodeURIComponent(catId)}?f=${shareBtn.dataset.path}`;
+    // clipboard API 仅安全上下文可用，非 HTTPS（局域网 IP 等）降级 execCommand
+    const fallbackCopy = () => {
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      toast(ok ? "链接已复制，粘贴给同学可直接打开此文件" : "复制失败，请手动复制地址栏链接");
+    };
+    if (navigator.clipboard && location.protocol === "https:") {
+      navigator.clipboard
+        .writeText(url)
+        .then(() => toast("链接已复制，粘贴给同学可直接打开此文件"))
+        .catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  }
 });
 
 document.getElementById("modalClose").addEventListener("click", closePreview);
@@ -403,6 +485,11 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   const inInput = e.target.matches("input, textarea");
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    document.getElementById("searchInput").focus();
+    return;
+  }
   if (inInput) return;
   if (e.key === "/") {
     e.preventDefault();
