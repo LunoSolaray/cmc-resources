@@ -1,0 +1,5 @@
+assets/data/resources.json
+dist/
+__pycache__/
+.venv/
+.history/
