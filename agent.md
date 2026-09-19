@@ -97,6 +97,10 @@ push main（网页上传即可）→ Action：setup-uv → `build_manifest.py` �
 - 加分类：`CATEGORY_META` 加一行（路径 → 显示名+图标）
 - 改样式：只动 `:root` 变量；暗色是唯一主题
 
+## License
+
+站点代码与页面编排以 CC BY-NC-SA 4.0 授权，全文在 LICENSE；仓库内收集的资料文件不适用本许可（版权归各自权利人），靠 README 免责声明约束。README 面向访客与上游，措辞变更需同步免责声明。
+
 ## Fork PR
 
 上游 LunoSolaray/cmc-resources，直接 push 被拒：
