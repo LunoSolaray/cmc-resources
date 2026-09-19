@@ -35,6 +35,7 @@ CATEGORY_META = {
     "files/kaoyan":        ("考研数学", "cap"),
     "files/kaoyan/gaoshu": ("高等数学", "activity"),
     "files/kaoyan/linear": ("线性代数", "grid"),
+    "files/kaoyan/test": ("模拟题", "cap"),
     "files/kaoyan/prob":   ("概率论", "shuffle"),
 }
 CATEGORY_ORDER = {path: i for i, path in enumerate(CATEGORY_META)}
