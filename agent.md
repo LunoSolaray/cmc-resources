@@ -77,10 +77,11 @@ init             loadManifest → buildIndex → applyHash → 渲染；catch �
 
 ## 交互
 
-- hash 路由：`#files/<id>`，`applyHash` 校验非法即忽略；`hashchange` 双向同步
-- 键盘：`J/K` 移动、`Enter` 预览、`/` 聚焦搜索、`Esc` 关弹层/清搜索；输入框内不拦截
-- PDF 预览：iframe 同源加载，浏览器原生渲染；下载仅经 `download` 属性链接
-- 搜索：`norm.includes(keyword)` 纯字符串匹配（无正则注入面），命中词 `<mark>` 高亮
+- hash 路由：`#files/<id>`（分类）与 `#files/<id>?f=<encodePath 编码路径>`（直达单文件，由行内「分享」按钮生成）；`applyHash` 校验非法即忽略；`hashchange` 双向同步
+- 键盘：`J/K` 移动、`Enter` 预览、`/` 或 `Ctrl/Cmd+K` 聚焦搜索、`Esc` 关弹层/清搜索；输入框内不拦截
+- PDF 预览：桌面 iframe 同源加载原生渲染；触屏（`pointer: coarse`）改为 `location.href` 交给平台原生查看器——移动浏览器 iframe 内嵌 PDF 不可用（iOS 仅渲染首页，Android 触发下载）；微信/QQ 内置内核跳转前 toast 提示
+- toast：`#toast` 单例，3s 自动消失，用于复制反馈与环境提示
+- 搜索：`norm.includes(keyword)` 纯字符串匹配（无正则注入面），命中词 `<mark>` 高亮；加载态为 8 行 shimmer 骨架屏
 
 ## Deploy
 
