@@ -601,6 +601,22 @@ body {
   color: var(--text-secondary);
   font-weight: 600;
 }
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.footer-link:hover {
+  color: var(--accent-soft);
+}
+.footer-link svg {
+  width: 13px;
+  height: 13px;
+}
 .footer-time {
   margin-top: 6px;
 }
